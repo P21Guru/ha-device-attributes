@@ -129,14 +129,12 @@ class UDSConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data={
                 "device_id": self._selected_device_id,
                 "device_name": self._selected_device_name,
-            },
-            options={
                 "devices": {
                     self._selected_device_id: {
                         "device_name": self._selected_device_name,
                         "attributes": self._pending_attributes,
                     }
-                }
+                },
             },
         )
 
@@ -190,15 +188,17 @@ class UDSOptionsFlow(config_entries.OptionsFlow):
             device = dev_reg.async_get(self._selected_device_id)
             device_name = _device_name(device) if device else self._selected_device_id
 
-            options = dict(self._config_entry.options)
-            devices = dict(options.get("devices", {}))
-            if self._selected_device_id not in devices:
-                devices[self._selected_device_id] = {
+            existing_devices = dict(
+                self._config_entry.data.get("devices")
+                or self._config_entry.options.get("devices")
+                or {}
+            )
+            if self._selected_device_id not in existing_devices:
+                existing_devices[self._selected_device_id] = {
                     "device_name": device_name,
                     "attributes": {},
                 }
-            options["devices"] = devices
-            self._devices = devices
+            self._devices = existing_devices
             return await self.async_step_add_attribute()
 
         return self.async_show_form(
@@ -213,8 +213,11 @@ class UDSOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
         """Choose which device to manage."""
-        options = dict(self._config_entry.options)
-        self._devices = dict(options.get("devices", {}))
+        self._devices = dict(
+            self._config_entry.data.get("devices")
+            or self._config_entry.options.get("devices")
+            or {}
+        )
 
         if not self._devices:
             return self.async_abort(reason="no_devices")
@@ -292,8 +295,12 @@ class UDSOptionsFlow(config_entries.OptionsFlow):
             if not attr_key:
                 errors["attribute_name"] = "invalid_name"
             else:
-                options = dict(self._config_entry.options)
-                devices = dict(options.get("devices", {}))
+                new_data = dict(self._config_entry.data)
+                devices = dict(
+                    new_data.get("devices")
+                    or self._config_entry.options.get("devices")
+                    or {}
+                )
                 if self._selected_device_id not in devices:
                     dev_reg = dr.async_get(self.hass)
                     device = dev_reg.async_get(self._selected_device_id)
@@ -309,8 +316,9 @@ class UDSOptionsFlow(config_entries.OptionsFlow):
                     "state_class": user_input.get("state_class") or None,
                     "notes": user_input.get("notes") or None,
                 }
-                options["devices"] = devices
-                return self.async_create_entry(title="", data=options)
+                new_data["devices"] = devices
+                self.hass.config_entries.async_update_entry(self._config_entry, data=new_data)
+                return self.async_create_entry(title="", data={})
 
         schema = vol.Schema({
             vol.Required("attribute_name"): selector.selector({"text": {}}),
@@ -348,8 +356,12 @@ class UDSOptionsFlow(config_entries.OptionsFlow):
             if not _slugify(attr_name):
                 errors["attribute_name"] = "invalid_name"
             else:
-                options = dict(self._config_entry.options)
-                devices = dict(options.get("devices", {}))
+                new_data = dict(self._config_entry.data)
+                devices = dict(
+                    new_data.get("devices")
+                    or self._config_entry.options.get("devices")
+                    or {}
+                )
                 devices[self._selected_device_id]["attributes"][self._selected_attr_key] = {
                     "name": attr_name,
                     "value": user_input["attribute_value"],
@@ -359,8 +371,9 @@ class UDSOptionsFlow(config_entries.OptionsFlow):
                     "state_class": user_input.get("state_class") or None,
                     "notes": user_input.get("notes") or None,
                 }
-                options["devices"] = devices
-                return self.async_create_entry(title="", data=options)
+                new_data["devices"] = devices
+                self.hass.config_entries.async_update_entry(self._config_entry, data=new_data)
+                return self.async_create_entry(title="", data={})
 
         schema = vol.Schema({
             vol.Required("attribute_name", default=existing.get("name", "")): selector.selector({"text": {}}),
@@ -397,14 +410,19 @@ class UDSOptionsFlow(config_entries.OptionsFlow):
 
         if user_input is not None:
             if user_input.get("confirm"):
-                options = dict(self._config_entry.options)
-                devices = dict(options.get("devices", {}))
+                new_data = dict(self._config_entry.data)
+                devices = dict(
+                    new_data.get("devices")
+                    or self._config_entry.options.get("devices")
+                    or {}
+                )
                 attrs = devices[self._selected_device_id]["attributes"]
                 attrs.pop(self._selected_attr_key, None)
                 if not attrs:
                     del devices[self._selected_device_id]
-                options["devices"] = devices
-                return self.async_create_entry(title="", data=options)
+                new_data["devices"] = devices
+                self.hass.config_entries.async_update_entry(self._config_entry, data=new_data)
+                return self.async_create_entry(title="", data={})
             return self.async_abort(reason="deletion_cancelled")
 
         return self.async_show_form(

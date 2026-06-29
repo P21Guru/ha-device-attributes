@@ -34,24 +34,42 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    devices_data: dict[str, Any] = config_entry.options.get("devices", {})
+    # Data is stored in entry.data["devices"]; fall back to entry.options for
+    # entries created by older versions of this integration.
+    devices_data: dict[str, Any] = (
+        config_entry.data.get("devices")
+        or config_entry.options.get("devices")
+        or {}
+    )
+
+    _LOGGER.debug("UDS setup: found %d device(s) in storage", len(devices_data))
+
     dev_reg = dr.async_get(hass)
     entities: list[UDSSensor] = []
 
     for device_id, device_data in devices_data.items():
         device_name = device_data.get("device_name", device_id)
         device_entry = dev_reg.async_get(device_id)
+        identifiers = device_entry.identifiers if device_entry else None
+
         for attr_key, attr_data in device_data.get("attributes", {}).items():
+            _LOGGER.debug(
+                "UDS: creating sensor for device=%s attr=%s value=%r",
+                device_name,
+                attr_key,
+                attr_data.get("value"),
+            )
             entities.append(
                 UDSSensor(
                     device_id=device_id,
                     device_name=device_name,
-                    device_identifiers=device_entry.identifiers if device_entry else None,
+                    device_identifiers=identifiers,
                     attr_key=attr_key,
                     attr_data=attr_data,
                 )
             )
 
+    _LOGGER.debug("UDS setup: adding %d sensor entity/entities", len(entities))
     async_add_entities(entities)
 
 
@@ -77,7 +95,9 @@ class UDSSensor(SensorEntity):
 
         device_slug = _slugify(device_name)
         self._attr_unique_id = f"uds_{device_id}_{attr_key}"
-        self.entity_id = f"sensor.uds_{device_slug}_{attr_key}"
+        # Suggest the entity_id slug; HA generates the final entity_id and
+        # the entity registry preserves it across reloads.
+        self._attr_suggested_object_id = f"uds_{device_slug}_{attr_key}"
         self._attr_name = f"{device_name} {attr_data.get('name', attr_key)}"
         self._attr_native_value = attr_data.get("value") or None
 
@@ -110,7 +130,7 @@ class UDSSensor(SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        attrs: dict[str, Any] = {
+        return {
             ATTR_DEVICE_ID: self._device_id,
             ATTR_DEVICE_NAME: self._device_name,
             ATTR_ATTRIBUTE_NAME: self._attr_data.get("name", self._attr_key),
@@ -118,7 +138,3 @@ class UDSSensor(SensorEntity):
             ATTR_ATTRIBUTE_VALUE: self._attr_data.get("value"),
             ATTR_MANAGED: True,
         }
-        notes = self._attr_data.get("notes")
-        if notes:
-            attrs["uds_notes"] = notes
-        return attrs
