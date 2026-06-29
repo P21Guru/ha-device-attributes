@@ -9,6 +9,7 @@ from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
@@ -37,6 +38,11 @@ def _slugify(name: str) -> str:
     return slug.strip("_")
 
 
+def _dev_field(device_entry: dr.DeviceEntry, field: str) -> str:
+    """Read a DeviceEntry field safely across all HA versions."""
+    return getattr(device_entry, field, None) or "unavailable"
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -55,7 +61,6 @@ async def async_setup_entry(
         for attr_key, attr_data in device_data.get("attributes", {}).items():
             entities.append(
                 UDSSensor(
-                    config_entry_id=config_entry.entry_id,
                     device_id=device_id,
                     device_name=device_name,
                     device_entry=device_entry,
@@ -67,11 +72,6 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-def _dev_attr(device_entry: dr.DeviceEntry, field: str) -> str:
-    """Safely read a DeviceEntry field that may not exist in older HA versions."""
-    return getattr(device_entry, field, None) or "unavailable"
-
-
 class UDSSensor(SensorEntity):
     """A sensor representing a single user-defined device attribute."""
 
@@ -80,14 +80,12 @@ class UDSSensor(SensorEntity):
 
     def __init__(
         self,
-        config_entry_id: str,
         device_id: str,
         device_name: str,
         device_entry: dr.DeviceEntry | None,
         attr_key: str,
         attr_data: dict[str, Any],
     ) -> None:
-        self._config_entry_id = config_entry_id
         self._device_id = device_id
         self._device_name = device_name
         self._device_entry = device_entry
@@ -100,7 +98,9 @@ class UDSSensor(SensorEntity):
         self._attr_name = f"{device_name} {attr_data.get('name', attr_key)}"
 
         self._attr_native_value = attr_data.get("value") or None
-        self._attr_icon = attr_data.get("icon") or None
+
+        icon = attr_data.get("icon")
+        self._attr_icon = icon if icon else None
 
         uom = attr_data.get("unit_of_measurement")
         self._attr_native_unit_of_measurement = uom if uom else None
@@ -114,16 +114,18 @@ class UDSSensor(SensorEntity):
             try:
                 self._attr_state_class = SensorStateClass(sc)
             except ValueError:
-                _LOGGER.warning("UDS: unknown state_class %r for %s, ignoring", sc, attr_key)
+                _LOGGER.warning(
+                    "UDS: unknown state_class %r for %s, ignoring", sc, attr_key
+                )
 
     @property
     def available(self) -> bool:
         return True
 
     @property
-    def device_info(self) -> dr.DeviceInfo | None:
+    def device_info(self) -> DeviceInfo | None:
         if self._device_entry is not None:
-            return dr.DeviceInfo(identifiers=self._device_entry.identifiers)
+            return DeviceInfo(identifiers=self._device_entry.identifiers)
         return None
 
     @property
@@ -143,12 +145,12 @@ class UDSSensor(SensorEntity):
 
         if self._device_entry:
             dev = self._device_entry
-            attrs[ATTR_DEVICE_MANUFACTURER] = _dev_attr(dev, "manufacturer")
-            attrs[ATTR_DEVICE_MODEL] = _dev_attr(dev, "model")
-            attrs[ATTR_DEVICE_MODEL_ID] = _dev_attr(dev, "model_id")
-            attrs[ATTR_DEVICE_SERIAL] = _dev_attr(dev, "serial_number")
-            attrs[ATTR_DEVICE_SW_VERSION] = _dev_attr(dev, "sw_version")
-            attrs[ATTR_DEVICE_HW_VERSION] = _dev_attr(dev, "hw_version")
-            attrs[ATTR_DEVICE_CONFIG_URL] = _dev_attr(dev, "configuration_url")
+            attrs[ATTR_DEVICE_MANUFACTURER] = _dev_field(dev, "manufacturer")
+            attrs[ATTR_DEVICE_MODEL] = _dev_field(dev, "model")
+            attrs[ATTR_DEVICE_MODEL_ID] = _dev_field(dev, "model_id")
+            attrs[ATTR_DEVICE_SERIAL] = _dev_field(dev, "serial_number")
+            attrs[ATTR_DEVICE_SW_VERSION] = _dev_field(dev, "sw_version")
+            attrs[ATTR_DEVICE_HW_VERSION] = _dev_field(dev, "hw_version")
+            attrs[ATTR_DEVICE_CONFIG_URL] = _dev_field(dev, "configuration_url")
 
         return attrs
