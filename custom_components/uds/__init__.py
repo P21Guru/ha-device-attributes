@@ -76,12 +76,12 @@ def _async_register_services(hass: HomeAssistant) -> None:
         value: str = call.data["value"]
 
         for entry in hass.config_entries.async_entries(DOMAIN):
-            options = copy.deepcopy(dict(entry.options))
-            devices = options.get("devices", {})
+            new_data = copy.deepcopy(dict(entry.data))
+            devices = new_data.get("devices") or dict(entry.options).get("devices") or {}
             if device_id in devices and attribute_key in devices[device_id].get("attributes", {}):
                 devices[device_id]["attributes"][attribute_key]["value"] = value
-                options["devices"] = devices
-                hass.config_entries.async_update_entry(entry, options=options)
+                new_data["devices"] = devices
+                hass.config_entries.async_update_entry(entry, data=new_data)
                 await hass.config_entries.async_reload(entry.entry_id)
                 return
 
@@ -103,8 +103,8 @@ def _async_register_services(hass: HomeAssistant) -> None:
         device_name = device.name_by_user or device.name if device else device_id
 
         for entry in hass.config_entries.async_entries(DOMAIN):
-            options = copy.deepcopy(dict(entry.options))
-            devices = options.setdefault("devices", {})
+            new_data = copy.deepcopy(dict(entry.data))
+            devices = new_data.get("devices") or dict(entry.options).get("devices") or {}
             if device_id not in devices:
                 devices[device_id] = {"device_name": device_name, "attributes": {}}
             devices[device_id]["attributes"][key] = {
@@ -115,8 +115,8 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 "device_class": device_class,
                 "state_class": state_class,
             }
-            options["devices"] = devices
-            hass.config_entries.async_update_entry(entry, options=options)
+            new_data["devices"] = devices
+            hass.config_entries.async_update_entry(entry, data=new_data)
             await hass.config_entries.async_reload(entry.entry_id)
             return
 
@@ -127,14 +127,14 @@ def _async_register_services(hass: HomeAssistant) -> None:
         attribute_key: str = call.data["attribute_key"]
 
         for entry in hass.config_entries.async_entries(DOMAIN):
-            options = copy.deepcopy(dict(entry.options))
-            devices = options.get("devices", {})
+            new_data = copy.deepcopy(dict(entry.data))
+            devices = new_data.get("devices") or dict(entry.options).get("devices") or {}
             if device_id in devices and attribute_key in devices[device_id].get("attributes", {}):
                 del devices[device_id]["attributes"][attribute_key]
                 if not devices[device_id]["attributes"]:
                     del devices[device_id]
-                options["devices"] = devices
-                hass.config_entries.async_update_entry(entry, options=options)
+                new_data["devices"] = devices
+                hass.config_entries.async_update_entry(entry, data=new_data)
                 await hass.config_entries.async_reload(entry.entry_id)
                 return
 
