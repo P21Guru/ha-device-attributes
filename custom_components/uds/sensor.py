@@ -9,7 +9,6 @@ from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
@@ -65,7 +64,12 @@ async def async_setup_entry(
                 )
             )
 
-    async_add_entities(entities, update_before_add=True)
+    async_add_entities(entities)
+
+
+def _dev_attr(device_entry: dr.DeviceEntry, field: str) -> str:
+    """Safely read a DeviceEntry field that may not exist in older HA versions."""
+    return getattr(device_entry, field, None) or "unavailable"
 
 
 class UDSSensor(SensorEntity):
@@ -95,11 +99,11 @@ class UDSSensor(SensorEntity):
         self.entity_id = f"sensor.uds_{device_slug}_{attr_key}"
         self._attr_name = f"{device_name} {attr_data.get('name', attr_key)}"
 
-        self._attr_native_value = attr_data.get("value")
+        self._attr_native_value = attr_data.get("value") or None
         self._attr_icon = attr_data.get("icon") or None
 
         uom = attr_data.get("unit_of_measurement")
-        self._attr_native_unit_of_measurement = uom or None
+        self._attr_native_unit_of_measurement = uom if uom else None
 
         dc = attr_data.get("device_class")
         if dc:
@@ -110,12 +114,16 @@ class UDSSensor(SensorEntity):
             try:
                 self._attr_state_class = SensorStateClass(sc)
             except ValueError:
-                pass
+                _LOGGER.warning("UDS: unknown state_class %r for %s, ignoring", sc, attr_key)
 
     @property
-    def device_info(self) -> dict[str, Any] | None:
+    def available(self) -> bool:
+        return True
+
+    @property
+    def device_info(self) -> dr.DeviceInfo | None:
         if self._device_entry is not None:
-            return {"identifiers": self._device_entry.identifiers}
+            return dr.DeviceInfo(identifiers=self._device_entry.identifiers)
         return None
 
     @property
@@ -129,20 +137,18 @@ class UDSSensor(SensorEntity):
             ATTR_MANAGED: True,
         }
 
-        if self._attr_data.get("notes"):
-            attrs["uds_notes"] = self._attr_data["notes"]
+        notes = self._attr_data.get("notes")
+        if notes:
+            attrs["uds_notes"] = notes
 
         if self._device_entry:
             dev = self._device_entry
-            attrs[ATTR_DEVICE_MANUFACTURER] = dev.manufacturer or "unavailable"
-            attrs[ATTR_DEVICE_MODEL] = dev.model or "unavailable"
-            attrs[ATTR_DEVICE_MODEL_ID] = dev.model_id or "unavailable"
-            attrs[ATTR_DEVICE_SERIAL] = dev.serial_number or "unavailable"
-            attrs[ATTR_DEVICE_SW_VERSION] = dev.sw_version or "unavailable"
-            attrs[ATTR_DEVICE_HW_VERSION] = dev.hw_version or "unavailable"
-            attrs[ATTR_DEVICE_CONFIG_URL] = dev.configuration_url or "unavailable"
+            attrs[ATTR_DEVICE_MANUFACTURER] = _dev_attr(dev, "manufacturer")
+            attrs[ATTR_DEVICE_MODEL] = _dev_attr(dev, "model")
+            attrs[ATTR_DEVICE_MODEL_ID] = _dev_attr(dev, "model_id")
+            attrs[ATTR_DEVICE_SERIAL] = _dev_attr(dev, "serial_number")
+            attrs[ATTR_DEVICE_SW_VERSION] = _dev_attr(dev, "sw_version")
+            attrs[ATTR_DEVICE_HW_VERSION] = _dev_attr(dev, "hw_version")
+            attrs[ATTR_DEVICE_CONFIG_URL] = _dev_attr(dev, "configuration_url")
 
         return attrs
-
-    async def async_update(self) -> None:
-        pass
