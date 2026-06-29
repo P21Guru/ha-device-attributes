@@ -1,0 +1,96 @@
+set_attribute_value:
+  name: Set Attribute Value
+  description: Updates the value of an existing user-defined device attribute sensor.
+  fields:
+    device_id:
+      name: Device ID
+      description: The Home Assistant device ID that owns the attribute.
+      required: true
+      selector:
+        text:
+    attribute_key:
+      name: Attribute Key
+      description: The slugified attribute key (e.g. filter_model).
+      required: true
+      selector:
+        text:
+    value:
+      name: Value
+      description: The new value to set for this attribute.
+      required: true
+      selector:
+        text:
+
+create_attribute:
+  name: Create Attribute
+  description: Creates a new user-defined attribute and sensor for a device.
+  fields:
+    device_id:
+      name: Device ID
+      description: The Home Assistant device ID.
+      required: true
+      selector:
+        text:
+    name:
+      name: Attribute Name
+      description: Human-readable name for the attribute (e.g. "Filter Model").
+      required: true
+      selector:
+        text:
+    value:
+      name: Value
+      description: The attribute value.
+      required: true
+      selector:
+        text:
+    icon:
+      name: Icon
+      description: Optional MDI icon (e.g. mdi:filter).
+      required: false
+      selector:
+        icon:
+          placeholder: mdi:label
+    unit_of_measurement:
+      name: Unit of Measurement
+      description: Optional unit of measurement.
+      required: false
+      selector:
+        text:
+    device_class:
+      name: Device Class
+      description: Optional sensor device class.
+      required: false
+      selector:
+        text:
+    state_class:
+      name: State Class
+      description: Optional sensor state class.
+      required: false
+      selector:
+        select:
+          options:
+            - ""
+            - measurement
+            - total
+            - total_increasing
+
+delete_attribute:
+  name: Delete Attribute
+  description: Deletes an existing user-defined attribute and removes its sensor entity.
+  fields:
+    device_id:
+      name: Device ID
+      description: The Home Assistant device ID.
+      required: true
+      selector:
+        text:
+    attribute_key:
+      name: Attribute Key
+      description: The slugified attribute key to delete (e.g. filter_model).
+      required: true
+      selector:
+        text:
+
+reload:
+  name: Reload
+  description: Reloads the UDS integration and refreshes all generated sensor entities.
