@@ -1,0 +1,170 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Select a Device",
+        "description": "Choose the Home Assistant device you want to add custom attributes to.",
+        "data": {
+          "device_id": "Device"
+        }
+      },
+      "add_attribute": {
+        "title": "Add Attribute for {device_name}",
+        "description": "Define a custom attribute. Each attribute will become a sensor entity.",
+        "data": {
+          "attribute_name": "Attribute Name",
+          "attribute_value": "Attribute Value",
+          "icon": "Icon (optional)",
+          "unit_of_measurement": "Unit of Measurement (optional)",
+          "device_class": "Device Class (optional)",
+          "state_class": "State Class (optional)",
+          "notes": "Notes (optional)",
+          "add_another": "Add another attribute"
+        }
+      }
+    },
+    "error": {
+      "invalid_name": "Attribute name cannot be empty or contain only special characters."
+    },
+    "abort": {
+      "already_configured": "This device is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Manage User-Defined Device Sensors",
+        "data": {
+          "action": "What would you like to do?"
+        }
+      },
+      "add_device": {
+        "title": "Select a Device",
+        "data": {
+          "device_id": "Device"
+        }
+      },
+      "select_device": {
+        "title": "Select a Device",
+        "data": {
+          "device_id": "Device"
+        }
+      },
+      "select_attribute": {
+        "title": "Select an Attribute",
+        "data": {
+          "attribute_key": "Attribute",
+          "attribute_action": "Action"
+        }
+      },
+      "add_attribute": {
+        "title": "Add Attribute",
+        "data": {
+          "attribute_name": "Attribute Name",
+          "attribute_value": "Attribute Value",
+          "icon": "Icon (optional)",
+          "unit_of_measurement": "Unit of Measurement (optional)",
+          "device_class": "Device Class (optional)",
+          "state_class": "State Class (optional)",
+          "notes": "Notes (optional)"
+        }
+      },
+      "edit_attribute": {
+        "title": "Edit Attribute: {attribute_name}",
+        "data": {
+          "attribute_name": "Attribute Name",
+          "attribute_value": "Attribute Value",
+          "icon": "Icon (optional)",
+          "unit_of_measurement": "Unit of Measurement (optional)",
+          "device_class": "Device Class (optional)",
+          "state_class": "State Class (optional)",
+          "notes": "Notes (optional)"
+        }
+      },
+      "confirm_delete": {
+        "title": "Delete Attribute: {attribute_name}",
+        "description": "Are you sure you want to delete the attribute \"{attribute_name}\"? This will remove the associated sensor entity.",
+        "data": {
+          "confirm": "Yes, delete this attribute"
+        }
+      }
+    },
+    "abort": {
+      "no_devices": "No devices with UDS attributes found.",
+      "no_attributes": "No attributes found for this device.",
+      "deletion_cancelled": "Deletion cancelled."
+    }
+  },
+  "services": {
+    "set_attribute_value": {
+      "name": "Set Attribute Value",
+      "description": "Updates the value of an existing user-defined attribute.",
+      "fields": {
+        "device_id": {
+          "name": "Device ID",
+          "description": "The Home Assistant device ID."
+        },
+        "attribute_key": {
+          "name": "Attribute Key",
+          "description": "The slugified attribute key (e.g. filter_model)."
+        },
+        "value": {
+          "name": "Value",
+          "description": "The new value for the attribute."
+        }
+      }
+    },
+    "create_attribute": {
+      "name": "Create Attribute",
+      "description": "Creates a new user-defined attribute for a device.",
+      "fields": {
+        "device_id": {
+          "name": "Device ID",
+          "description": "The Home Assistant device ID."
+        },
+        "name": {
+          "name": "Attribute Name",
+          "description": "The human-readable attribute name."
+        },
+        "value": {
+          "name": "Value",
+          "description": "The attribute value."
+        },
+        "icon": {
+          "name": "Icon",
+          "description": "Optional MDI icon (e.g. mdi:filter)."
+        },
+        "unit_of_measurement": {
+          "name": "Unit of Measurement",
+          "description": "Optional unit of measurement."
+        },
+        "device_class": {
+          "name": "Device Class",
+          "description": "Optional sensor device class."
+        },
+        "state_class": {
+          "name": "State Class",
+          "description": "Optional sensor state class."
+        }
+      }
+    },
+    "delete_attribute": {
+      "name": "Delete Attribute",
+      "description": "Deletes an existing user-defined attribute and its sensor.",
+      "fields": {
+        "device_id": {
+          "name": "Device ID",
+          "description": "The Home Assistant device ID."
+        },
+        "attribute_key": {
+          "name": "Attribute Key",
+          "description": "The slugified attribute key to delete."
+        }
+      }
+    },
+    "reload": {
+      "name": "Reload",
+      "description": "Reloads the UDS integration and refreshes all sensor entities."
+    }
+  }
+}
